@@ -1,13 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Home, BookOpen, AlertTriangle, Compass, Menu, X } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Home, BookOpen, AlertTriangle, Compass, Menu, X, User, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
 
 const NavigationMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
 
   // Handle navigation menu on scroll
   useEffect(() => {
@@ -39,6 +44,23 @@ const NavigationMenu: React.FC = () => {
     { name: 'Report Issues', path: '/report', icon: <AlertTriangle size={18} /> },
     { name: 'Resources', path: '/resources', icon: <Compass size={18} /> },
   ];
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out."
+      });
+      navigate('/');
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to log out. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <header 
@@ -81,6 +103,43 @@ const NavigationMenu: React.FC = () => {
             ))}
           </nav>
 
+          {/* Authentication Buttons - Desktop */}
+          <div className="hidden md:flex items-center gap-2">
+            {currentUser ? (
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium">
+                  {currentUser.displayName || currentUser.email}
+                </span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleLogout}
+                  className="flex items-center gap-1"
+                >
+                  <LogOut size={16} /> 
+                  <span>Logout</span>
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => navigate('/login')}
+                >
+                  Log in
+                </Button>
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  onClick={() => navigate('/signup')}
+                >
+                  Sign up
+                </Button>
+              </>
+            )}
+          </div>
+
           {/* Mobile Menu Toggle */}
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -112,6 +171,41 @@ const NavigationMenu: React.FC = () => {
                   <span>{link.name}</span>
                 </Link>
               ))}
+              
+              {/* Authentication Buttons - Mobile */}
+              <div className="border-t border-border pt-2 mt-2">
+                {currentUser ? (
+                  <>
+                    <div className="px-4 py-2 text-sm font-medium text-muted-foreground">
+                      Signed in as {currentUser.displayName || currentUser.email}
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-accent transition-colors text-left"
+                    >
+                      <LogOut size={18} />
+                      <span>Log out</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      to="/login"
+                      className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-accent transition-colors"
+                    >
+                      <User size={18} />
+                      <span>Log in</span>
+                    </Link>
+                    <Link
+                      to="/signup"
+                      className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors mt-2"
+                    >
+                      <User size={18} />
+                      <span>Sign up</span>
+                    </Link>
+                  </>
+                )}
+              </div>
             </nav>
           </div>
         </div>

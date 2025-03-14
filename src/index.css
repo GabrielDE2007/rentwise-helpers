@@ -91,4 +91,21 @@
   .glass-panel {
     @apply backdrop-blur-md border border-white/20 shadow-glass;
   }
+
+  /* Navigation link styles */
+  .nav-link {
+    @apply px-3 py-2 text-sm rounded-md relative overflow-hidden flex items-center justify-center transition-colors hover:bg-accent;
+  }
+
+  .nav-link-active {
+    @apply text-primary font-medium;
+  }
+
+  .nav-link-indicator {
+    @apply absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary invisible;
+  }
+
+  .nav-link-active .nav-link-indicator {
+    @apply visible;
+  }
 }
