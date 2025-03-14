@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Shield, Home, HelpCircle } from 'lucide-react';
+import { Search, Shield, Home, HelpCircle, AlertTriangle } from 'lucide-react';
 import useTransitionEffect from '@/hooks/useTransitionEffect';
 import { cn } from '@/lib/utils';
 
