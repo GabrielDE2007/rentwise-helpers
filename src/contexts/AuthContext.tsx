@@ -44,16 +44,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await updateProfile(userCredential.user, { displayName });
   }
 
-  function login(email: string, password: string) {
-    return signInWithEmailAndPassword(auth, email, password);
+  async function login(email: string, password: string) {
+    await signInWithEmailAndPassword(auth, email, password);
   }
 
-  function logout() {
-    return signOut(auth);
+  async function logout() {
+    await signOut(auth);
   }
 
-  function resetPassword(email: string) {
-    return sendPasswordResetEmail(auth, email);
+  async function resetPassword(email: string) {
+    await sendPasswordResetEmail(auth, email);
   }
 
   useEffect(() => {
