@@ -36,16 +36,16 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase - wrap in try/catch to handle initialization errors
-let app;
-let auth;
+let firebaseApp;
+let firebaseAuth;
 
 try {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
+  firebaseApp = initializeApp(firebaseConfig);
+  firebaseAuth = getAuth(firebaseApp);
 } catch (error) {
   console.error("Firebase initialization error:", error);
   console.log("Please check your .env.local file and ensure all Firebase configuration variables are set correctly.");
 }
 
-export const auth = auth;
-export default app;
+export const app = firebaseApp;
+export const auth = firebaseAuth;
