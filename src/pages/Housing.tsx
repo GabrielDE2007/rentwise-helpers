@@ -4,61 +4,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Home, DollarSign, Filter, Bed, Bath, Users } from "lucide-react";
+import { Search, MapPin, Home, DollarSign, Filter, Bed, Bath, Users, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// Mock data for housing listings
-const HOUSING_LISTINGS = [
-  {
-    id: 1,
-    title: "Affordable 2BR in South Ward",
-    address: "123 Clinton Ave, Newark, NJ",
-    price: 1250,
-    bedrooms: 2,
-    bathrooms: 1,
-    type: "Section 8 Accepted",
-    image: "https://placehold.co/600x400/housing-primary/white?text=Housing+Image",
-    tags: ["pet-friendly", "near-transit", "utilities-included"]
-  },
-  {
-    id: 2,
-    title: "Studio Apartment Downtown",
-    address: "456 Market St, Newark, NJ",
-    price: 950,
-    bedrooms: 0,
-    bathrooms: 1,
-    type: "Low Income",
-    image: "https://placehold.co/600x400/housing-secondary/white?text=Housing+Image",
-    tags: ["near-transit", "utilities-included"]
-  },
-  {
-    id: 3,
-    title: "Family 3BR Apartment",
-    address: "789 Bergen St, Newark, NJ",
-    price: 1500,
-    bedrooms: 3,
-    bathrooms: 1.5,
-    type: "Affordable Housing",
-    image: "https://placehold.co/600x400/housing-primary/white?text=Housing+Image",
-    tags: ["pet-friendly", "community-garden"]
-  },
-  {
-    id: 4,
-    title: "Senior Living 1BR",
-    address: "101 Springfield Ave, Newark, NJ",
-    price: 1100,
-    bedrooms: 1,
-    bathrooms: 1,
-    type: "Senior Housing",
-    image: "https://placehold.co/600x400/housing-secondary/white?text=Housing+Image",
-    tags: ["utilities-included", "senior-friendly", "near-transit"]
-  },
-];
+import { useHousingListings, HousingListing } from "@/services/housingService";
+import { useToast } from "@/components/ui/use-toast";
+import { Card, CardContent } from "@/components/ui/card";
 
 const Housing: React.FC = () => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const [minPrice, setMinPrice] = useState<number | undefined>(undefined);
+  const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [selectedBedrooms, setSelectedBedrooms] = useState<number | null>(null);
   
+  // Fetch housing listings with react-query
+  const { data: listings, isLoading, isError, error } = useHousingListings({
+    searchTerm,
+    minPrice,
+    maxPrice,
+    bedrooms: selectedBedrooms,
+    amenities: activeFilters
+  });
+  
+  // Handle filter toggles
   const toggleFilter = (filter: string) => {
     if (activeFilters.includes(filter)) {
       setActiveFilters(activeFilters.filter(f => f !== filter));
@@ -67,17 +36,41 @@ const Housing: React.FC = () => {
     }
   };
   
-  // Filter listings based on search term and active filters
-  const filteredListings = HOUSING_LISTINGS.filter(listing => {
-    const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         listing.address.toLowerCase().includes(searchTerm.toLowerCase());
+  // Handle price filter changes
+  const handlePriceFilterChange = () => {
+    const min = minPrice || undefined;
+    const max = maxPrice || undefined;
     
-    if (activeFilters.length === 0) return matchesSearch;
-    
-    const hasMatchingTags = activeFilters.some(filter => listing.tags.includes(filter));
-    
-    return matchesSearch && hasMatchingTags;
-  });
+    // Validate price range
+    if (min !== undefined && max !== undefined && min > max) {
+      toast({
+        title: "Invalid Price Range",
+        description: "Minimum price cannot be greater than maximum price",
+        variant: "destructive"
+      });
+      return;
+    }
+  };
+  
+  // Handle reset filters
+  const resetFilters = () => {
+    setSearchTerm("");
+    setMinPrice(undefined);
+    setMaxPrice(undefined);
+    setActiveFilters([]);
+    setSelectedBedrooms(null);
+  };
+  
+  // Show error toast if there's an error
+  React.useEffect(() => {
+    if (isError && error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load housing listings",
+        variant: "destructive"
+      });
+    }
+  }, [isError, error, toast]);
   
   return (
     <div className="py-12 bg-background min-h-screen">
@@ -132,7 +125,10 @@ const Housing: React.FC = () => {
                     {id: "pet-friendly", label: "Pet Friendly"},
                     {id: "utilities-included", label: "Utilities Included"},
                     {id: "near-transit", label: "Near Public Transit"},
-                    {id: "community-garden", label: "Community Garden"}
+                    {id: "community-garden", label: "Community Garden"},
+                    {id: "accessible", label: "Accessible"},
+                    {id: "laundry-in-unit", label: "In-Unit Laundry"},
+                    {id: "central-air", label: "Central Air"}
                   ]}
                   activeFilters={activeFilters}
                   onToggleFilter={toggleFilter}
@@ -141,18 +137,65 @@ const Housing: React.FC = () => {
                 <Separator />
                 
                 <div>
-                  <h4 className="text-sm font-medium mb-3">Price Range</h4>
-                  <div className="flex items-center gap-2">
-                    <Input placeholder="Min" type="number" className="w-full" />
-                    <span>-</span>
-                    <Input placeholder="Max" type="number" className="w-full" />
+                  <h4 className="text-sm font-medium mb-3">Bedrooms</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {[null, 0, 1, 2, 3, 4].map((num) => (
+                      <button
+                        key={num === null ? 'any' : num}
+                        onClick={() => setSelectedBedrooms(num)}
+                        className={cn(
+                          "px-3 py-1 text-xs rounded-full transition-colors",
+                          selectedBedrooms === num
+                            ? "bg-housing-primary text-white"
+                            : "bg-housing-muted text-housing-dark hover:bg-housing-light"
+                        )}
+                      >
+                        {num === null ? 'Any' : num === 0 ? 'Studio' : `${num} BR`}
+                      </button>
+                    ))}
                   </div>
+                </div>
+                
+                <Separator />
+                
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Price Range</h4>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Input 
+                      placeholder="Min" 
+                      type="number" 
+                      className="w-full" 
+                      value={minPrice || ''}
+                      onChange={(e) => setMinPrice(e.target.value ? Number(e.target.value) : undefined)}
+                    />
+                    <span>-</span>
+                    <Input 
+                      placeholder="Max" 
+                      type="number" 
+                      className="w-full" 
+                      value={maxPrice || ''}
+                      onChange={(e) => setMaxPrice(e.target.value ? Number(e.target.value) : undefined)}
+                    />
+                  </div>
+                  <Button 
+                    size="sm" 
+                    className="w-full"
+                    onClick={handlePriceFilterChange}
+                  >
+                    Apply Price
+                  </Button>
                 </div>
               </div>
               
               <div className="mt-6 flex gap-2">
-                <Button variant="outline" size="sm" className="w-full">Reset</Button>
-                <Button size="sm" className="w-full">Apply</Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={resetFilters}
+                >
+                  Reset
+                </Button>
               </div>
             </div>
             
@@ -170,28 +213,44 @@ const Housing: React.FC = () => {
           <div className="md:col-span-3">
             <div className="flex justify-between items-center mb-4">
               <p className="text-muted-foreground">
-                {filteredListings.length} properties found
+                {isLoading ? 'Loading properties...' : `${listings?.length || 0} properties found`}
               </p>
               
               <div className="flex gap-2">
                 {activeFilters.length > 0 && (
-                  <Button variant="ghost" size="sm" onClick={() => setActiveFilters([])}>
+                  <Button variant="ghost" size="sm" onClick={resetFilters}>
                     Clear Filters
                   </Button>
                 )}
               </div>
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {filteredListings.map(listing => (
-                <HousingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
-            
-            {filteredListings.length === 0 && (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 text-housing-primary animate-spin mb-4" />
+                <p className="text-muted-foreground">Loading housing listings...</p>
+              </div>
+            ) : isError ? (
+              <Card className="p-8 text-center">
+                <CardContent>
+                  <h3 className="text-lg font-medium mb-2">Failed to load listings</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {error instanceof Error ? error.message : "An unexpected error occurred."}
+                  </p>
+                  <Button onClick={() => window.location.reload()}>Try Again</Button>
+                </CardContent>
+              </Card>
+            ) : listings && listings.length > 0 ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {listings.map(listing => (
+                  <HousingCard key={listing.id} listing={listing} />
+                ))}
+              </div>
+            ) : (
               <div className="text-center py-12">
+                <Home className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">No housing listings found matching your criteria.</p>
-                <Button variant="outline" onClick={() => {setSearchTerm(""); setActiveFilters([])}} className="mt-4">
+                <Button variant="outline" onClick={resetFilters} className="mt-4">
                   Reset Filters
                 </Button>
               </div>
@@ -238,17 +297,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 };
 
 interface HousingCardProps {
-  listing: {
-    id: number;
-    title: string;
-    address: string;
-    price: number;
-    bedrooms: number;
-    bathrooms: number;
-    type: string;
-    image: string;
-    tags: string[];
-  };
+  listing: HousingListing;
 }
 
 const HousingCard: React.FC<HousingCardProps> = ({ listing }) => {
@@ -257,7 +306,20 @@ const HousingCard: React.FC<HousingCardProps> = ({ listing }) => {
     "near-transit": "Near Transit",
     "utilities-included": "Utilities Included",
     "community-garden": "Community Garden",
-    "senior-friendly": "Senior Friendly"
+    "senior-friendly": "Senior Friendly",
+    "accessible": "Accessible",
+    "laundry-in-unit": "In-Unit Laundry",
+    "central-air": "Central Air",
+    "backyard": "Backyard",
+    "dishwasher": "Dishwasher",
+    "balcony": "Balcony",
+    "hardwood-floors": "Hardwood Floors",
+    "stainless-appliances": "Stainless Appliances",
+    "furnished": "Furnished",
+    "near-campus": "Near Campus",
+    "luxury": "Luxury",
+    "garage": "Garage",
+    "renovated": "Renovated"
   };
   
   return (
@@ -292,14 +354,25 @@ const HousingCard: React.FC<HousingCardProps> = ({ listing }) => {
             <Bath className="h-4 w-4 text-muted-foreground" />
             <span>{listing.bathrooms} {listing.bathrooms === 1 ? "Bath" : "Baths"}</span>
           </div>
+          {listing.sqft && (
+            <div className="flex items-center gap-1">
+              <Home className="h-4 w-4 text-muted-foreground" />
+              <span>{listing.sqft} sqft</span>
+            </div>
+          )}
         </div>
         
         <div className="flex flex-wrap gap-2 mb-4">
-          {listing.tags.map(tag => (
+          {listing.tags.slice(0, 3).map(tag => (
             <Badge key={tag} variant="outline" className="bg-housing-accent text-xs">
               {tagLabels[tag] || tag}
             </Badge>
           ))}
+          {listing.tags.length > 3 && (
+            <Badge variant="outline" className="bg-muted text-xs">
+              +{listing.tags.length - 3} more
+            </Badge>
+          )}
         </div>
         
         <div className="flex gap-2">
