@@ -211,6 +211,7 @@ export const fetchHousingListings = async (filters?: {
   maxPrice?: number;
   bedrooms?: number | null;
   amenities?: string[];
+  housingTypes?: string[];
 }): Promise<HousingListing[]> => {
   // In a real application, this would be an API call to a real estate service
   // For now, we'll use our expanded mock data
@@ -255,6 +256,13 @@ export const fetchHousingListings = async (filters?: {
           filters.amenities!.some(amenity => listing.tags.includes(amenity))
         );
       }
+      
+      // Add housing type filter
+      if (filters.housingTypes && filters.housingTypes.length > 0) {
+        listings = listings.filter(listing => 
+          filters.housingTypes!.includes(listing.type)
+        );
+      }
     }
     
     return listings;
@@ -273,6 +281,7 @@ export const useHousingListings = (filters?: {
   maxPrice?: number;
   bedrooms?: number | null;
   amenities?: string[];
+  housingTypes?: string[];
 }) => {
   return useQuery({
     queryKey: ['housingListings', filters],

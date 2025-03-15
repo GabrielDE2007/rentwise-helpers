@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Search, MapPin, Home, DollarSign, Filter, Bed, Bath, Users, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHousingListings, HousingListing } from "@/services/housingService";
@@ -16,6 +17,7 @@ const Housing: React.FC = () => {
   const [minPrice, setMinPrice] = useState<number | undefined>(undefined);
   const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [activeHousingTypes, setActiveHousingTypes] = useState<string[]>([]);
   const [selectedBedrooms, setSelectedBedrooms] = useState<number | null>(null);
   
   // Fetch housing listings with react-query
@@ -24,15 +26,25 @@ const Housing: React.FC = () => {
     minPrice,
     maxPrice,
     bedrooms: selectedBedrooms,
-    amenities: activeFilters
+    amenities: activeFilters,
+    housingTypes: activeHousingTypes
   });
   
-  // Handle filter toggles
+  // Handle amenity filter toggles
   const toggleFilter = (filter: string) => {
     if (activeFilters.includes(filter)) {
       setActiveFilters(activeFilters.filter(f => f !== filter));
     } else {
       setActiveFilters([...activeFilters, filter]);
+    }
+  };
+  
+  // Handle housing type filter toggles
+  const toggleHousingType = (type: string) => {
+    if (activeHousingTypes.includes(type)) {
+      setActiveHousingTypes(activeHousingTypes.filter(t => t !== type));
+    } else {
+      setActiveHousingTypes([...activeHousingTypes, type]);
     }
   };
   
@@ -58,6 +70,7 @@ const Housing: React.FC = () => {
     setMinPrice(undefined);
     setMaxPrice(undefined);
     setActiveFilters([]);
+    setActiveHousingTypes([]);
     setSelectedBedrooms(null);
   };
   
@@ -71,6 +84,18 @@ const Housing: React.FC = () => {
       });
     }
   }, [isError, error, toast]);
+  
+  // Available housing types
+  const housingTypes = [
+    {id: "Section 8 Accepted", label: "Section 8"},
+    {id: "Affordable Housing", label: "Affordable Housing"},
+    {id: "Senior Housing", label: "Senior Housing"},
+    {id: "Low Income", label: "Low Income"},
+    {id: "Accessible Housing", label: "Accessible Housing"},
+    {id: "Market Rate", label: "Market Rate"},
+    {id: "Student Housing", label: "Student Housing"},
+    {id: "First-Time Homebuyer", label: "First-Time Homebuyer"}
+  ];
   
   return (
     <div className="py-12 bg-background min-h-screen">
@@ -109,12 +134,9 @@ const Housing: React.FC = () => {
               <div className="space-y-4">
                 <FilterSection 
                   title="Housing Type" 
-                  options={[
-                    {id: "section-8", label: "Section 8"},
-                    {id: "affordable", label: "Affordable Housing"},
-                    {id: "senior", label: "Senior Housing"},
-                    {id: "low-income", label: "Low Income"}
-                  ]}
+                  options={housingTypes}
+                  activeFilters={activeHousingTypes}
+                  onToggleFilter={toggleHousingType}
                 />
                 
                 <Separator />
@@ -217,7 +239,7 @@ const Housing: React.FC = () => {
               </p>
               
               <div className="flex gap-2">
-                {activeFilters.length > 0 && (
+                {(activeFilters.length > 0 || activeHousingTypes.length > 0) && (
                   <Button variant="ghost" size="sm" onClick={resetFilters}>
                     Clear Filters
                   </Button>
@@ -281,12 +303,11 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       <div className="space-y-2">
         {options.map(option => (
           <div key={option.id} className="flex items-center">
-            <input 
-              type="checkbox" 
-              id={option.id} 
+            <Checkbox 
+              id={option.id}
               className="mr-2"
               checked={activeFilters.includes(option.id)}
-              onChange={() => onToggleFilter(option.id)} 
+              onCheckedChange={() => onToggleFilter(option.id)}
             />
             <label htmlFor={option.id} className="text-sm cursor-pointer">{option.label}</label>
           </div>
